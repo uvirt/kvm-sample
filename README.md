@@ -15,7 +15,7 @@ Fedora 24 Workstation 64 bit KVM host.
 
 ## Copy Guest OS ISO Media
 
-Before executing the script, you need to copy CentOS 7.2 install media to /var/lib/libvirt/images directory on KVM host.
+Before executing the script, you need to copy CentOS 7.2 install media to "/var/lib/libvirt/images" directory on KVM host.
 
     cd /var/lib/libvirt/images
     wget http://ftp.riken.jp/Linux/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-1511.iso
@@ -25,7 +25,16 @@ Before executing the script, you need to copy CentOS 7.2 install media to /var/l
     wget https://raw.githubusercontent.com/uvirt/kvm-sample/master/centos72-install.sh
     sh centos72-install.sh
 
-And wait until "finish all job" message is displayed.
+And wait until the message "finish all job" is displayed.
 It takes approximately 15 minutes.
+
+## How to start the guest and connect via ssh
+
+    virsh list --all
+    virsh start centos72
+    ssh root@192.168.122.110
+    password is 'password'
+
+
 
 
