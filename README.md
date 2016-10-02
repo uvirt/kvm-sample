@@ -1,5 +1,5 @@
 # kvm-sample
-Unattended install of CentOS 6.8 and CentOS 7.2 guest
+Unattended install of CentOS 6.8 and CentOS 7.2 vm on KVM host
 
 https://www.uvirt.com/wp1/20160307-1601
 
@@ -25,7 +25,7 @@ Before executing the script, you need to copy CentOS 6.8 install media under the
 Before executing the script, you need to copy CentOS 7.2 install media under the "/var/lib/libvirt/images" directory on KVM host.
 
     cd /var/lib/libvirt/images
-    wget http://ftp.riken.jp/Linux/centos/7/isos/x86_64/CentOS-7-x86_64-DVD-1511.iso
+    wget http://ftp.riken.jp/Linux/centos/7.2.1511/isos/x86_64/CentOS-7-x86_64-DVD-1511.iso
 
 ## How to run this script
 

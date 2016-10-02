@@ -1,5 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
+export LANG=C
 echo "*** begin installation job ***"
 
 # ----------------------------------------------------------
@@ -136,8 +137,8 @@ bootloader --location=mbr --boot-drive=vda --append=" crashkernel=auto"
 clearpart --none --initlabel 
 # Disk partitioning information
 part /boot --fstype="xfs" --ondisk=vda --size=500
-part pv.20 --fstype="lvmpv" --ondisk=vda --size=8192 --grow
-volgroup centos --pesize=4096 pv.20
+part pv.2 --fstype="lvmpv" --ondisk=vda --size=8192 --grow
+volgroup centos --pesize=4096 pv.2
 logvol swap --fstype="swap" --size=921 --name=swap --vgname=centos
 logvol / --fstype="xfs" --grow --maxsize=51200 --size=1024 --name=root --vgname=centos
 
@@ -177,6 +178,9 @@ virt-install \
 --initrd-inject=${KSF} \
 --extra-args="ks=file:/${KSF} console=tty0 console=ttyS0" \
 --noautoconsole
+
+# Display Console
+virsh console ${DOM}
 
 # wait until guest installation is completed
 finished="0";
