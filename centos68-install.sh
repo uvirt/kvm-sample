@@ -39,7 +39,7 @@ HOSTNAME=centos68.example.com
 IP=192.168.122.110
 #-- Netmask
 NETMASK=255.255.255.0
-#-- Gateway
+#-- Gateway IP
 GATEWAY=192.168.122.1
 #-- DNS server
 NAMESERVER=8.8.8.8,8.8.4.4
@@ -47,6 +47,10 @@ NAMESERVER=8.8.8.8,8.8.4.4
 #-- NTP server
 NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
 #NTPSERVERS=ntp1.jst.mfeed.ad.jp,ntp2.jst.mfeed.ad.jp,ntp3.jst.mfeed.ad.jp
+
+# -- Virtual NETWORK
+#VIRTUALNETWORK=bridge:virbr0
+VIRTUALNETWORK=network:default
 
 # ----------------------------------------------------------
 # Initial Check
@@ -187,16 +191,16 @@ echo "*** kickstart file created ***"
 echo "*** virt-install starting ***"
 
 virt-install \
---name=${DOM} \
+--name="${DOM}" \
 --ram=${RAM} \
 --vcpus=1 \
 --os-type=linux \
 --os-variant=centos6.0 \
---file=${IMG} \
+--file="${IMG}" \
 --file-size=${SIZE} \
---location=${DVD1} \
---network=bridge:virbr0 \
---initrd-inject=${KSF} \
+--location="${DVD1}" \
+--network="${VIRTUALNETWORK}" \
+--initrd-inject="${KSF}" \
 --extra-args="ks=file:/${KSF} console=tty0 console=ttyS0" \
 --noautoconsole
 
