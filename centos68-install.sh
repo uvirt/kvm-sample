@@ -20,16 +20,9 @@ RAM=1024
 #-- Guest Disk Size (GB)
 SIZE=16.0
 #SIZE=20.0
-
-#-- Install Media (ISO)  full path
-DVD1=/var/lib/libvirt/images/CentOS-6.8-x86_64-bin-DVD1.iso
-DVD2=/var/lib/libvirt/images/CentOS-6.8-x86_64-bin-DVD2.iso
-#-- dvd basename   ex. "CentOS-6.8-x86_64-bin-DVD1.iso"
-DVD1_ISO=$(basename $DVD1)
-DVD2_ISO=$(basename $DVD2)
-#-- dvd mount point name  ex. "CentOS-6.8-x86_64-bin-DVD1"
-DVD1_MNT=${DVD1_ISO%.*}
-DVD2_MNT=${DVD2_ISO%.*}
+# -- Virtual NETWORK
+#VIRTUALNETWORK=bridge:virbr0
+VIRTUALNETWORK=network:default
 
 #-- root password
 PASSWORD=password
@@ -48,9 +41,15 @@ NAMESERVER=8.8.8.8,8.8.4.4
 NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
 #NTPSERVERS=ntp1.jst.mfeed.ad.jp,ntp2.jst.mfeed.ad.jp,ntp3.jst.mfeed.ad.jp
 
-# -- Virtual NETWORK
-#VIRTUALNETWORK=bridge:virbr0
-VIRTUALNETWORK=network:default
+#-- Install Media (ISO)  full path
+DVD1=/var/lib/libvirt/images/CentOS-6.8-x86_64-bin-DVD1.iso
+DVD2=/var/lib/libvirt/images/CentOS-6.8-x86_64-bin-DVD2.iso
+#-- dvd basename   ex. "CentOS-6.8-x86_64-bin-DVD1.iso"
+DVD1_ISO=$(basename $DVD1)
+DVD2_ISO=$(basename $DVD2)
+#-- dvd mount point name  ex. "CentOS-6.8-x86_64-bin-DVD1"
+DVD1_MNT=${DVD1_ISO%.*}
+DVD2_MNT=${DVD2_ISO%.*}
 
 # ----------------------------------------------------------
 # Initial Check
@@ -125,7 +124,7 @@ firstboot --disable
 #selinux --enforcing
 #selinux --permissive
 selinux --disabled
-## at beginning, it's better to set selinux disabled to avoid some error
+## Before installation, disable selinux to avoid some error.
 #-- Network information --
 network \
 --onboot yes \
