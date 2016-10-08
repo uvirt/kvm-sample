@@ -398,8 +398,6 @@ guestfish -d ${DOM} -i << _EOF_
   upload ${F7L} ${F7R}
 _EOF_
 
-
-
 # --------------------------------------
 # enable sshd, httpd services
 # --------------------------------------
