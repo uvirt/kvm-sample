@@ -41,12 +41,13 @@ NAMESERVER=8.8.8.8,8.8.4.4
 NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
 #NTPSERVERS=ntp1.jst.mfeed.ad.jp,ntp2.jst.mfeed.ad.jp,ntp3.jst.mfeed.ad.jp
 
+
 #-- Install Media (ISO)  full path
 DVD1=/var/lib/libvirt/images/CentOS-6.8-x86_64-bin-DVD1.iso
 DVD2=/var/lib/libvirt/images/CentOS-6.8-x86_64-bin-DVD2.iso
 #-- dvd basename   ex. "CentOS-6.8-x86_64-bin-DVD1.iso"
-DVD1_ISO=$(basename $DVD1)
-DVD2_ISO=$(basename $DVD2)
+DVD1_ISO=$(basename ${DVD1})
+DVD2_ISO=$(basename ${DVD2})
 #-- dvd mount point name  ex. "CentOS-6.8-x86_64-bin-DVD1"
 DVD1_MNT=${DVD1_ISO%.*}
 DVD2_MNT=${DVD2_ISO%.*}
@@ -56,25 +57,21 @@ DVD2_MNT=${DVD2_ISO%.*}
 # ----------------------------------------------------------
 
 CNT=0
-
 # Make sure only root can run our script
 if [ "$(id -u)" != "0" ]; then
     ((CNT++))
     echo "ERROR${CNT}: This script must be run as root." 1>&2
 fi
-
 # Make sure dvd image file exists under /var/lib/libvirt/images dir
 if [ ! -f ${DVD1} ]; then
     ((CNT++))
     echo "ERROR${CNT}: DVD install media [${DVD1_ISO}] must be copied under \"/var/lib/libvirt/images\" dir." 1>&2
 fi
-
 # exit if error
 if [ $CNT -gt 0 ]; then
     echo "*** exit job ***" 1>&2
     exit 1
 fi
-
 echo "*** initial check OK ***"
 
 # ----------------------------------------------------------
@@ -124,7 +121,7 @@ firstboot --disable
 #selinux --enforcing
 #selinux --permissive
 selinux --disabled
-## Before installation, disable selinux to avoid some error.
+## selinux must be disabled before installation to avoid some error.
 #-- Network information --
 network \
 --onboot yes \
@@ -143,6 +140,7 @@ firewall --enabled --ssh
 #-- System timezone --
 timezone America/New_York
 #timezone Asia/Tokyo
+
 #-- System bootloader configuration --
 bootloader --location=mbr
 
@@ -203,6 +201,11 @@ virt-install \
 --extra-args="ks=file:/${KSF} console=tty0 console=ttyS0" \
 --noautoconsole
 
+if [ $? -ne 0 ]; then
+  # something error happned before guest install
+  exit
+fi
+
 # Display Console
 virsh console ${DOM}
 
@@ -224,9 +227,9 @@ echo "*** virt-install finished ***"
 
 echo "*** begin customize guest ***"
 
-# --------------------------------------
+# ----------------------------
 # import gpg key
-# --------------------------------------
+# ----------------------------
 
 echo "*** import gpg key ***"
 
@@ -238,9 +241,9 @@ guestfish -d ${DOM} -i << _EOF_
   command "rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-Testing-6"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # disable all existing repos 
-# --------------------------------------
+# ----------------------------
 
 echo "*** disable all existing repos  ***"
 
@@ -252,15 +255,15 @@ guestfish -d ${DOM} -i << _EOF_
   command "yum-config-manager --disable centosplus"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # setup dvd yum repos
-# --------------------------------------
+# ----------------------------
 
 echo "*** setup dvd yum repository ***"
 
-FR1=/etc/yum.repos.d/${DVD1_MNT}.repo
-FL1=$(mktemp)
-cat << _EOF_ > ${FL1}
+F1R=/etc/yum.repos.d/${DVD1_MNT}.repo
+F1L=$(mktemp)
+cat << _EOF_ > ${F1L}
 [${DVD1_MNT}]
 name=${DVD1_MNT}
 baseurl=file:///media/${DVD1_MNT}/
@@ -273,9 +276,9 @@ gpgkey=file:///media/${DVD1_MNT}/RPM-GPG-KEY-CentOS-6
        file:///media/${DVD1_MNT}/RPM-GPG-KEY-CentOS-Testing-6
 _EOF_
 
-FR2=/etc/rc.d/isomount
-FL2=$(mktemp)
-cat << _EOF_ > ${FL2}
+F2R=/etc/rc.d/isomount
+F2L=$(mktemp)
+cat << _EOF_ > ${F2L}
 #
 # isomount
 #
@@ -298,23 +301,23 @@ isomount ${DVD2_ISO}
 
 _EOF_
 
-FR3=/etc/rc.d/rc.local
+F3R=/etc/rc.d/rc.local
 guestfish -d ${DOM} -i << _EOF_
   #-- upload .repo file --
-  upload ${FL1} ${FR1}
+  upload ${F1L} ${F1R}
 
   #-- upload /etc/rc.d/isomount --
-  upload ${FL2} ${FR2}
+  upload ${F2L} ${F2R}
 
   #-- backup original file --
-  cp-a ${FR3} ${FR3}-ORG
+  cp-a ${F3R} ${F3R}-ORG
   #-- update /etc/rc.d/rc.local --
-  write-append ${FR3} "\n"
-  write-append ${FR3} "# centos68 dvd iso mount\n"
-  write-append ${FR3} "source /etc/rc.d/isomount\n"
+  write-append ${F3R} "\n"
+  write-append ${F3R} "# centos68 dvd iso mount\n"
+  write-append ${F3R} "source /etc/rc.d/isomount\n"
 
   #-- enable rc.local service --
-  command "chmod 755 ${FR3}"
+  command "chmod 755 ${F3R}"
 
 _EOF_
 
@@ -334,14 +337,14 @@ if [ -f ${DVD2} ]; then
 _EOF_
 fi
 
-# ----------------------------------------------------------
+# ----------------------------
 # install packages
-# ----------------------------------------------------------
+# ----------------------------
 
 echo "*** install packages ***"
 
 guestfish -d ${DOM} -i << _EOF_
-  #-- first we need to mount iso --
+  #-- before package installation, we need to mount iso --
   mkdir-p /media/${DVD1_MNT}
   mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
 
@@ -354,63 +357,63 @@ guestfish -d ${DOM} -i << _EOF_
   command "yum install httpd -y"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # grub timeout settings
-# --------------------------------------
+# ----------------------------
 
 echo "*** grub timeout settings ***"
 
-FR4=/boot/grub/grub.conf
-FL4=$(mktemp)
+F4R=/boot/grub/grub.conf
+F4L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   #-- backup original file --
-  cp-a ${FR4} ${FR4}-ORG
+  cp-a ${F4R} ${F4R}-ORG
   #-- copy file from guest to local --
-  download ${FR4} ${FL4}
+  download ${F4R} ${F4L}
   #-- edit file on local --
-  ! sed -i -e 's/^timeout=.*/timeout=0/' ${FL4}
-  ! sed -i -e '/kernel/s/ rhgb//g' ${FL4}
-  ! sed -i -e '/kernel/s/ quiet//g' ${FL4}
-  ! sed -i -e '/kernel/s/ console=[a-zA-Z0-9,]*//g' ${FL4}
-  ! sed -i -e '/kernel/s/\$/ console=tty0 console=ttyS0/' ${FL4}
-  ! echo ${FL4}
-  ! cat ${FL4}
+  ! sed -i -e 's/^timeout=.*/timeout=0/' ${F4L}
+  ! sed -i -e '/kernel/s/ rhgb//g' ${F4L}
+  ! sed -i -e '/kernel/s/ quiet//g' ${F4L}
+  ! sed -i -e '/kernel/s/ console=[a-zA-Z0-9,]*//g' ${F4L}
+  ! sed -i -e '/kernel/s/\$/ console=tty0 console=ttyS0/' ${F4L}
+  ! echo ${F4L}
+  ! cat ${F4L}
   #-- copy file from local to guest --
-  upload ${FL4} ${FR4}
+  upload ${F4L} ${F4R}
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # swappiness settings
-# --------------------------------------
+# ----------------------------
 
 echo "*** swappiness settings ***"
 
 #-- swapiness settings file --
-FR5=/etc/sysctl.d/swappiness.conf
+F5R=/etc/sysctl.d/swappiness.conf
 
 #-- suppress swappiness --
 guestfish -d ${DOM} -i << _EOF_
-  write ${FR5} "vm.swappiness = 0\n"
+  write ${F5R} "vm.swappiness = 0\n"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # disable ipv6
-# --------------------------------------
+# ----------------------------
 
 echo "*** disable ipv6 ***"
 
 #-- ipv6 settings file --
-FR6=/etc/sysctl.d/disable_ipv6.conf
+F6R=/etc/sysctl.d/disable_ipv6.conf
 
 #-- disable ipv6 --
 guestfish -d ${DOM} -i << _EOF_
-  write        ${FR6} "net.ipv6.conf.all.disable_ipv6 = 1\n"
-  write-append ${FR6} "net.ipv6.conf.default.disable_ipv6 = 1\n"
+  write        ${F6R} "net.ipv6.conf.all.disable_ipv6 = 1\n"
+  write-append ${F6R} "net.ipv6.conf.default.disable_ipv6 = 1\n"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # enable sshd, httpd services
-# --------------------------------------
+# ----------------------------
 
 echo "*** enable sshd, httpd services ***"
 
@@ -419,18 +422,18 @@ guestfish -d ${DOM} -i << _EOF_
   command "chkconfig httpd on"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # firewall settings
-# --------------------------------------
+# ----------------------------
 
 echo "*** firewall settings ***"
 
-FR7=/etc/sysconfig/system-config-firewall
-FR8=/etc/sysconfig/iptables
+F7R=/etc/sysconfig/system-config-firewall
+F8R=/etc/sysconfig/iptables
 guestfish -d ${DOM} -i << _EOF_
   #-- backup original file --
-  cp-a ${FR7} ${FR7}-ORG
-  cp-a ${FR8} ${FR8}-ORG
+  cp-a ${F7R} ${F7R}-ORG
+  cp-a ${F8R} ${F8R}-ORG
 
   #-- open firewall port --
   command "lokkit --service=ssh --nostart"
@@ -438,31 +441,31 @@ guestfish -d ${DOM} -i << _EOF_
   command "lokkit --service=https --nostart"
 _EOF_
 
-# --------------------------------------
+# ----------------------------
 # selinux enabled at next reboot
-# --------------------------------------
+# ----------------------------
 
 echo "*** selinux enabled ***"
 
-FR9=/etc/selinux/config
-FL9=$(mktemp)
+F9R=/etc/selinux/config
+F9L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
   #-- backup original file --
-  cp-a ${FR9} ${FR9}-ORG
+  cp-a ${F9R} ${F9R}-ORG
   #-- copy file from guest to local --
-  download ${FR9} ${FL9}
+  download ${F9R} ${F9L}
   #-- edit file on local --
-  ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${FL9}
-  ! echo ${FL9}
-  ! cat ${FL9}
+  ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${F9L}
+  ! echo ${F9L}
+  ! cat ${F9L}
   #-- copy file from local to guest --
-  upload ${FL9} ${FR9}
+  upload ${F9L} ${F9R}
 _EOF_
 
-# ----------------------------------------------------------
+# ----------------------------
 # end customize guest
-# ----------------------------------------------------------
+# ----------------------------
 
 echo "*** finish all job ***"
 
