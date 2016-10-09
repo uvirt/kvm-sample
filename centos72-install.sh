@@ -36,6 +36,7 @@ NETMASK=255.255.255.0
 GATEWAY=192.168.122.1
 #-- DNS server
 NAMESERVER=8.8.8.8,8.8.4.4
+#NAMESERVER=192.168.100.1,192.168.122.1
 #-- NTP server
 NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
 #NTPSERVERS=ntp1.jst.mfeed.ad.jp,ntp2.jst.mfeed.ad.jp,ntp3.jst.mfeed.ad.jp
