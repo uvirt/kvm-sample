@@ -284,15 +284,15 @@ _EOF_
 
 F3R=/etc/rc.d/rc.local
 guestfish -d ${DOM} -i << _EOF_
-  #-- upload *.repo file
+  #-- upload .repo file
   upload ${F1L} ${F1R}
 
   #-- upload /etc/rc.d/isomount
   upload ${F2L} ${F2R}
 
-  #-- backup /etc/rc.d/rc.local original
+  #-- backup original file
   cp-a ${F3R} ${F3R}-ORG
-  #-- update /etc/rc.d/rc.local
+  #-- update rc.local
   write-append ${F3R} "\n"
   write-append ${F3R} "# centos72 dvd iso mount\n"
   write-append ${F3R} "source /etc/rc.d/isomount\n"
@@ -313,16 +313,17 @@ fi
 # install packages
 # ----------------------------------------------------------
 
-echo "*** install sos package ***"
+echo "*** install packages ***"
 
 guestfish -d ${DOM} -i << _EOF_
-  #-- before package installation, we need to mount iso --
+  #-- before package installation, we need to mount iso
   mkdir-p /media/${DVD1_MNT}
   mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
 
-  # install sos
+  #-- you can install packages here
+  #-- install sos
   command "yum install sos -y"
-  #-- install httpd --
+  #-- install httpd
   command "yum install httpd -y"
 _EOF_
 
@@ -335,7 +336,7 @@ echo "*** grub timeout settings ***"
 F4R=/etc/default/grub
 F4L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  # backup original /etc/default/grub
+  # backup original
   cp-a ${F4R} ${F4R}-ORG
   # copy from guest to local
   download ${F4R} ${F4L}
