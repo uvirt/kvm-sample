@@ -36,7 +36,6 @@ NETMASK=255.255.255.0
 GATEWAY=192.168.122.1
 #-- DNS server
 NAMESERVER=8.8.8.8,8.8.4.4
-#NAMESERVER=192.168.100.1,192.168.122.1
 #-- NTP server
 NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
 #NTPSERVERS=ntp1.jst.mfeed.ad.jp,ntp2.jst.mfeed.ad.jp,ntp3.jst.mfeed.ad.jp
@@ -155,15 +154,15 @@ volgroup centos --pesize=4096 pv.2
 logvol / --fstype="xfs" --grow --maxsize=51200 --size=1024 --name=root --vgname=centos
 logvol swap --fstype="swap" --size=1024 --name=swap --vgname=centos
 
-### Packages Section ###
+#-- Packages Section --
 %packages
 @core
-kexec-tools
 yum-utils
+chrony
 
 %end
 
-### Post Section ###
+#-- Post Section --
 %post
 
 %end
