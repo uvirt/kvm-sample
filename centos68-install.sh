@@ -157,6 +157,7 @@ logvol swap --fstype="swap" --name=lv_swap --vgname=VolGroup --size=1024
 %packages
 @core
 yum-utils
+
 %end
 
 #-- Post Section --
@@ -202,7 +203,7 @@ virt-install \
 --noautoconsole
 
 if [ $? -ne 0 ]; then
-  # something error happned before guest install
+  # something error happned at beginning of virt-install
   exit
 fi
 

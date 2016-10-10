@@ -158,8 +158,8 @@ logvol swap --fstype="swap" --size=1024 --name=swap --vgname=centos
 #-- Packages Section --
 %packages
 @core
-yum-utils
 chrony
+yum-utils
 
 %end
 
@@ -193,7 +193,7 @@ virt-install \
 --noautoconsole
 
 if [ $? -ne 0 ]; then
-  # something error happned before guest install
+  # something error happned at beginning of virt-install
   exit
 fi
 
