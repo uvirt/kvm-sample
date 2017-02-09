@@ -197,7 +197,7 @@ virt-install \
 --noautoconsole
 
 if [ $? -ne 0 ]; then
-  # something error happened before guest install 
+  # something error happened before guest install
   exit
 fi
 
@@ -340,11 +340,11 @@ echo "*** grub timeout settings ***"
 F4R=/etc/default/grub
 F4L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  # backup original
+  #-- backup original
   cp-a ${F4R} ${F4R}-ORG
-  # copy from guest to local
+  #-- copy from guest to local
   download ${F4R} ${F4L}
-  # edit on local
+  #-- edit on local
   ! sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' ${F4L}
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ rhgb//g' ${F4L}
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ quiet//g' ${F4L}
@@ -352,9 +352,9 @@ guestfish -d ${DOM} -i << _EOF_
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/\"\$/ console=tty0 console=ttyS0\"/' ${F4L}
   ! echo ${F4L}
   ! cat ${F4L}
-  # copy from local to guest
+  #-- copy from local to guest
   upload ${F4L} ${F4R}
-  # run grub2-mkconfig
+  #-- run grub2-mkconfig
   command "grub2-mkconfig -o /boot/grub2/grub.cfg"
 _EOF_
 
@@ -393,13 +393,13 @@ _EOF_
 F7R=/etc/postfix/main.cf
 F7L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  # backup original /etc/default/grub
+  #-- backup original
   cp-a ${F7R} ${F7R}-ORG
-  # copy from guest to local
+  #-- copy from guest to local
   download ${F7R} ${F7L}
-  # edit on local
+  #-- edit on local
   ! sed -i -e '/^inet_protocols =/s/all/ipv4/g' ${F7L}
-  # copy from local to guest
+  #-- copy from local to guest
   upload ${F7L} ${F7R}
 _EOF_
 
@@ -438,15 +438,15 @@ F9R=/etc/selinux/config
 F9L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
-  #-- backup original file --
+  #-- backup original file
   cp-a ${F9R} ${F9R}-ORG
-  #-- copy file from guest to local --
+  #-- copy file from guest to local
   download ${F9R} ${F9L}
-  #-- edit file on local --
+  #-- edit file on local
   ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${F9L}
   ! echo ${F9L}
   ! cat ${F9L}
-  #-- copy file from local to guest --
+  #-- copy file from local to guest
   upload ${F9L} ${F9R}
 _EOF_
 

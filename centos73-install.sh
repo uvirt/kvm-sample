@@ -210,7 +210,7 @@ virt-install \
 --noautoconsole
 
 if [ $? -ne 0 ]; then
-  # something error happened before guest install 
+  # something error happened before guest install
   exit
 fi
 
@@ -356,15 +356,15 @@ guestfish -d ${DOM} -i << _EOF_
   #-- install httpd
   command "yum install httpd -y"
   #-- edit httpd.conf ServerName
-  # backup original
+  #-- backup original
   cp-a ${F4R} ${F4R}-ORG
-  # copy from guest to local
+  #-- copy from guest to local
   download ${F4R} ${F4L}
-  # edit on local
+  #-- edit on local
   ! sed -i -e '/^#ServerName www.example.com:80/a ServerName 127.0.0.1:80' ${F4L}
   ! echo ${F4L}
   ! cat ${F4L}
-  # copy from local to guest
+  #-- copy from local to guest
   upload ${F4L} ${F4R}
 _EOF_
 
@@ -378,11 +378,11 @@ echo "*** grub timeout settings ***"
 F5R=/etc/default/grub
 F5L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  # backup original
+  #-- backup original
   cp-a ${F5R} ${F5R}-ORG
-  # copy from guest to local
+  #-- copy from guest to local
   download ${F5R} ${F5L}
-  # edit on local
+  #-- edit on local
   ! sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' ${F5L}
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ rhgb//g' ${F5L}
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ quiet//g' ${F5L}
@@ -390,9 +390,9 @@ guestfish -d ${DOM} -i << _EOF_
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/\"\$/ console=tty0 console=ttyS0\"/' ${F5L}
   ! echo ${F5L}
   ! cat ${F5L}
-  # copy from local to guest
+  #-- copy from local to guest
   upload ${F5L} ${F5R}
-  # run grub2-mkconfig
+  #-- run grub2-mkconfig
   command "grub2-mkconfig -o /boot/grub2/grub.cfg"
 _EOF_
 
@@ -431,13 +431,13 @@ _EOF_
 F8R=/etc/postfix/main.cf
 F8L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  # backup original /etc/default/grub
+  #-- backup original
   cp-a ${F8R} ${F8R}-ORG
-  # copy from guest to local
+  #-- copy from guest to local
   download ${F8R} ${F8L}
-  # edit on local
+  #-- edit on local
   ! sed -i -e '/^inet_protocols =/s/all/ipv4/g' ${F8L}
-  # copy from local to guest
+  #-- copy from local to guest
   upload ${F8L} ${F8R}
 _EOF_
 
@@ -453,13 +453,13 @@ F9R=/etc/ssh/sshd_config
 # ssh UseDNS no
 F9L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  # backup original /etc/ssh/sshd_config
+  #-- backup original /etc/ssh/sshd_config
   cp-a ${F9R} ${F9R}-ORG
-  # copy from guest to local
+  #-- copy from guest to local
   download ${F9R} ${F9L}
-  # edit on local
+  #-- edit on local
   ! sed -i -e 's%\(^\s*#\s*UseDNS\s\s*yes\)%UseDNS no%g' ${F9L}
-  # copy from local to guest
+  #-- copy from local to guest
   upload ${F9L} ${F9R}
 _EOF_
 
@@ -498,15 +498,15 @@ F10R=/etc/selinux/config
 F10L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
-  #-- backup original file --
+  #-- backup original file
   cp-a ${F10R} ${F10R}-ORG
-  #-- copy file from guest to local --
+  #-- copy file from guest to local
   download ${F10R} ${F10L}
-  #-- edit file on local --
+  #-- edit file on local
   ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${F10L}
   ! echo ${F10L}
   ! cat ${F10L}
-  #-- copy file from local to guest --
+  #-- copy file from local to guest
   upload ${F10L} ${F10R}
 _EOF_
 
