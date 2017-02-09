@@ -14,6 +14,9 @@ IMG=/var/lib/libvirt/images/${DOM}.qcow2
 #-- Kickstart file
 KSF=${DOM}-ks.cfg
 
+#-- num of vCPUs --
+VCPUS=1
+#VCPUS=2
 #-- Guest Memory Size (MB)
 RAM=1024
 #RAM=2048
@@ -157,7 +160,6 @@ logvol swap --fstype="swap" --name=lv_swap --vgname=VolGroup --size=1024
 %packages
 @core
 yum-utils
-
 %end
 
 #-- Post Section --
@@ -191,7 +193,8 @@ echo "*** virt-install starting ***"
 virt-install \
 --name="${DOM}" \
 --ram=${RAM} \
---vcpus=1 \
+--vcpus=${VCPUS} \
+--cpu host \
 --os-type=linux \
 --os-variant=centos6.0 \
 --file="${IMG}" \
@@ -203,7 +206,7 @@ virt-install \
 --noautoconsole
 
 if [ $? -ne 0 ]; then
-  # something error happned at beginning of virt-install
+  # something error happned before guest instal
   exit
 fi
 

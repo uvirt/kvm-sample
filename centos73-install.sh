@@ -8,7 +8,7 @@ echo "*** begin installation job ***"
 # ----------------------------------------------------------
 
 #-- Guest Name (Domain Name)
-DOM=centos72
+DOM=centos73
 #-- Guest Image File
 IMG=/var/lib/libvirt/images/${DOM}.qcow2
 #-- Kickstart file
@@ -30,7 +30,7 @@ VIRTUALNETWORK=network:default
 #-- root password
 PASSWORD=password
 #-- Hostname
-HOSTNAME=centos72.example.com
+HOSTNAME=centos73.example.com
 #-- IP Address
 IP=192.168.122.110
 #-- Netmask
@@ -46,11 +46,11 @@ NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.c
 
 
 #-- Install Media (ISO)  full path
-DVD1=/var/lib/libvirt/images/CentOS-7-x86_64-DVD-1511.iso
-#DVD1=/var/lib/libvirt/images//CentOS-7-x86_64-Everything-1511.iso
-#-- dvd basename   ex. "CentOS-7-x86_64-DVD-1511.iso"
+DVD1=/var/lib/libvirt/images/CentOS-7-x86_64-DVD-1611.iso
+#DVD1=/var/lib/libvirt/images//CentOS-7-x86_64-Everything-1611.iso
+#-- dvd basename   ex. "CentOS-7-x86_64-DVD-1611.iso"
 DVD1_ISO=$(basename ${DVD1})
-#-- dvd mount point name  ex. "CentOS-7-x86_64-DVD-1511"
+#-- dvd mount point name  ex. "CentOS-7-x86_64-DVD-1611"
 DVD1_MNT=${DVD1_ISO%.*}
 
 # ----------------------------------------------------------
@@ -160,10 +160,23 @@ logvol swap --fstype="swap" --size=1024 --name=swap --vgname=centos
 
 #-- Packages Section --
 %packages
+@^minimal
 @core
 yum-utils
 chrony
 
+%end
+
+#-- Addon Section --
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+#-- Anaconda Section --
+%anaconda
+pwpolicy root --minlen=6 --minquality=50 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=50 --notstrict --nochanges --notempty
+pwpolicy luks --minlen=6 --minquality=50 --notstrict --nochanges --notempty
 %end
 
 #-- Post Section --
@@ -298,7 +311,7 @@ guestfish -d ${DOM} -i << _EOF_
   cp-a ${F3R} ${F3R}-ORG
   #-- update rc.local
   write-append ${F3R} "\n"
-  write-append ${F3R} "# centos72 dvd iso mount\n"
+  write-append ${F3R} "# centos73 dvd iso mount\n"
   write-append ${F3R} "source /etc/rc.d/isomount\n"
   #-- enable rc.local service
   command "chmod 755 ${F3R}"
@@ -317,7 +330,7 @@ fi
 # install packages
 # ----------------------------------------------------------
 
-echo "*** install packages ***"
+echo "*** install packages: sos, xxxx ***"
 
 guestfish -d ${DOM} -i << _EOF_
   #-- before package installation, we need to mount iso
@@ -327,9 +340,34 @@ guestfish -d ${DOM} -i << _EOF_
   #-- you can install packages here
   #-- install sos
   command "yum install sos -y"
+  #-- install xxxx
+  #command "yum install xxxx -y"
+_EOF_
+
+echo "*** install packages: httpd ***"
+
+F4R=/etc/httpd/conf/httpd.conf
+F4L=$(mktemp)
+guestfish -d ${DOM} -i << _EOF_
+  #-- before package installation, we need to mount iso
+  mkdir-p /media/${DVD1_MNT}
+  mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
+
   #-- install httpd
   command "yum install httpd -y"
+  #-- edit httpd.conf ServerName
+  # backup original
+  cp-a ${F4R} ${F4R}-ORG
+  # copy from guest to local
+  download ${F4R} ${F4L}
+  # edit on local
+  ! sed -i -e '/^#ServerName www.example.com:80/a ServerName 127.0.0.1:80' ${F4L}
+  ! echo ${F4L}
+  ! cat ${F4L}
+  # copy from local to guest
+  upload ${F4L} ${F4R}
 _EOF_
+
 
 # --------------------------------------
 # grub timeout settings
@@ -337,23 +375,23 @@ _EOF_
 
 echo "*** grub timeout settings ***"
 
-F4R=/etc/default/grub
-F4L=$(mktemp)
+F5R=/etc/default/grub
+F5L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   # backup original
-  cp-a ${F4R} ${F4R}-ORG
+  cp-a ${F5R} ${F5R}-ORG
   # copy from guest to local
-  download ${F4R} ${F4L}
+  download ${F5R} ${F5L}
   # edit on local
-  ! sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' ${F4L}
-  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ rhgb//g' ${F4L}
-  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ quiet//g' ${F4L}
-  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ console=[a-zA-Z0-9,]*//g' ${F4L}
-  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/\"\$/ console=tty0 console=ttyS0\"/' ${F4L}
-  ! echo ${F4L}
-  ! cat ${F4L}
+  ! sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' ${F5L}
+  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ rhgb//g' ${F5L}
+  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ quiet//g' ${F5L}
+  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ console=[a-zA-Z0-9,]*//g' ${F5L}
+  ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/\"\$/ console=tty0 console=ttyS0\"/' ${F5L}
+  ! echo ${F5L}
+  ! cat ${F5L}
   # copy from local to guest
-  upload ${F4L} ${F4R}
+  upload ${F5L} ${F5R}
   # run grub2-mkconfig
   command "grub2-mkconfig -o /boot/grub2/grub.cfg"
 _EOF_
@@ -365,13 +403,13 @@ _EOF_
 echo "*** swappiness settings ***"
 
 # swapiness settings file
-F5R=/etc/sysctl.d/swappiness.conf
+F6R=/etc/sysctl.d/swappiness.conf
 
 # suppress swappiness
 guestfish -d ${DOM} -i << _EOF_
   # "tuned" must be disabled on centos7.2 for changing swappiness
   command "systemctl disable tuned.service"
-  write ${F5R} "vm.swappiness = 0\n"
+  write ${F6R} "vm.swappiness = 0\n"
 _EOF_
 
 # --------------------------------------
@@ -381,26 +419,48 @@ _EOF_
 echo "*** disable ipv6 ***"
 
 # ipv6 settings file
-F6R=/etc/sysctl.d/disable_ipv6.conf
+F7R=/etc/sysctl.d/disable_ipv6.conf
 
 # disable ipv6
 guestfish -d ${DOM} -i << _EOF_
-  write        ${F6R} "net.ipv6.conf.all.disable_ipv6 = 1\n"
-  write-append ${F6R} "net.ipv6.conf.default.disable_ipv6 = 1\n"
+  write        ${F7R} "net.ipv6.conf.all.disable_ipv6 = 1\n"
+  write-append ${F7R} "net.ipv6.conf.default.disable_ipv6 = 1\n"
 _EOF_
 
 # if ipv6 is disabled, postfix is failed to start. this is the workaround.
-F7R=/etc/postfix/main.cf
-F7L=$(mktemp)
+F8R=/etc/postfix/main.cf
+F8L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   # backup original /etc/default/grub
-  cp-a ${F7R} ${F7R}-ORG
+  cp-a ${F8R} ${F8R}-ORG
   # copy from guest to local
-  download ${F7R} ${F7L}
+  download ${F8R} ${F8L}
   # edit on local
-  ! sed -i -e '/^inet_protocols =/s/all/ipv4/g' ${F7L}
+  ! sed -i -e '/^inet_protocols =/s/all/ipv4/g' ${F8L}
   # copy from local to guest
-  upload ${F7L} ${F7R}
+  upload ${F8L} ${F8R}
+_EOF_
+
+# --------------------------------------
+# change ssh UseDNS yes -> no
+# --------------------------------------
+
+echo "*** ssh UseDNS no ***"
+
+# sshd_config settings file
+F9R=/etc/ssh/sshd_config
+
+# ssh UseDNS no
+F9L=$(mktemp)
+guestfish -d ${DOM} -i << _EOF_
+  # backup original /etc/ssh/sshd_config
+  cp-a ${F9R} ${F9R}-ORG
+  # copy from guest to local
+  download ${F9R} ${F9L}
+  # edit on local
+  ! sed -i -e 's%\(^\s*#\s*UseDNS\s\s*yes\)%UseDNS no%g' ${F9L}
+  # copy from local to guest
+  upload ${F9L} ${F9R}
 _EOF_
 
 # --------------------------------------
@@ -434,20 +494,20 @@ _EOF_
 
 echo "*** selinux enabled ***"
 
-F9R=/etc/selinux/config
-F9L=$(mktemp)
+F10R=/etc/selinux/config
+F10L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
   #-- backup original file --
-  cp-a ${F9R} ${F9R}-ORG
+  cp-a ${F10R} ${F10R}-ORG
   #-- copy file from guest to local --
-  download ${F9R} ${F9L}
+  download ${F10R} ${F10L}
   #-- edit file on local --
-  ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${F9L}
-  ! echo ${F9L}
-  ! cat ${F9L}
+  ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${F10L}
+  ! echo ${F10L}
+  ! cat ${F10L}
   #-- copy file from local to guest --
-  upload ${F9L} ${F9R}
+  upload ${F10L} ${F10R}
 _EOF_
 
 # ----------------------------------------------------------
