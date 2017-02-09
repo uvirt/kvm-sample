@@ -206,7 +206,7 @@ virt-install \
 --noautoconsole
 
 if [ $? -ne 0 ]; then
-  # something error happened before guest instal
+  # something error happened before guest instal 
   exit
 fi
 
