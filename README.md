@@ -71,4 +71,13 @@ It takes approximately 15 minutes.
     ssh root@192.168.122.110
     password is 'password'
 
+## How to use yum repository on internet
+
+    yum-config-manager --enable base
+    yum-config-manager --enable updates
+    yum-config-manager --enable extras
+    yum-config-manager --enable centosplus
+
+
+
 
