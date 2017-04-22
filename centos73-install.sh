@@ -7,50 +7,50 @@ echo "*** begin installation job ***"
 # Parameters
 # ----------------------------------------------------------
 
-#-- Guest Name (Domain Name)
+#== Guest Name (Domain Name) ==
 DOM=centos73
-#-- Guest Image File
+#== Guest Image File ==
 IMG=/var/lib/libvirt/images/${DOM}.qcow2
-#-- Kickstart file
+#== Kickstart file ==
 KSF=${DOM}-ks.cfg
 
-#-- num of vCPUs --
+#== num of vCPUs ==
 VCPUS=1
 #VCPUS=2
-#-- Guest Memory Size (MB)
+#== Guest Memory Size (MB) ==
 RAM=1024
 #RAM=2048
-#-- Guest Disk Size (GB)
+#== Guest Disk Size (GB) ==
 SIZE=16.0
 #SIZE=20.0
-# -- Virtual NETWORK
+#== Virtual NETWORK ==
 #VIRTUALNETWORK=bridge:virbr0
 VIRTUALNETWORK=network:default
 
-#-- root password
+#== root password ==
 PASSWORD=password
-#-- Hostname
+#== Hostname ==
 HOSTNAME=centos73.example.com
-#-- IP Address
+#== IP Address ==
 IP=192.168.122.110
-#-- Netmask
+#== Netmask ==
 NETMASK=255.255.255.0
-#-- Gateway
+#== Gateway ==
 GATEWAY=192.168.122.1
-#-- DNS server
+#== DNS server ==
 NAMESERVER=8.8.8.8,8.8.4.4
 #NAMESERVER=192.168.100.1,192.168.122.1
-#-- NTP server
+#== NTP server ==
 NTPSERVERS=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
 #NTPSERVERS=ntp1.jst.mfeed.ad.jp,ntp2.jst.mfeed.ad.jp,ntp3.jst.mfeed.ad.jp
 
 
-#-- Install Media (ISO)  full path
+#== Install Media (ISO) full path ==
 DVD1=/var/lib/libvirt/images/CentOS-7-x86_64-DVD-1611.iso
 #DVD1=/var/lib/libvirt/images//CentOS-7-x86_64-Everything-1611.iso
-#-- dvd basename   ex. "CentOS-7-x86_64-DVD-1611.iso"
+#== dvd basename  ex. "CentOS-7-x86_64-DVD-1611.iso" ==
 DVD1_ISO=$(basename ${DVD1})
-#-- dvd mount point name  ex. "CentOS-7-x86_64-DVD-1611"
+#== dvd mount point name  ex. "CentOS-7-x86_64-DVD-1611" ==
 DVD1_MNT=${DVD1_ISO%.*}
 
 # ----------------------------------------------------------
@@ -76,15 +76,17 @@ fi
 echo "*** initial check OK ***"
 
 # ----------------------------------------------------------
-# clear old vm if existing
+# erase previous vm & snapshot if existing
 # ----------------------------------------------------------
 
-echo "*** clear old vm ***"
+echo "*** erase previous vm & snapshot ***"
 
+# delete snapshot of domain
+virsh snapshot-list ${DOM} --name 2>/dev/null | xargs -I% sh -c "virsh snapshot-delete ${DOM} --snapshotname % >/dev/null 2>&1;"
 # stop domain forcefully
 virsh destroy ${DOM} >/dev/null 2>&1
 # undefine domain
-virsh undefine ${DOM} --remove-all-storage >/dev/null 2>&1
+virsh undefine ${DOM} --remove-all-storage --delete-snapshots >/dev/null 2>&1
 # remove domain image file
 rm -f ${IMG} >/dev/null 2>&1
 
@@ -95,36 +97,36 @@ rm -f ${IMG} >/dev/null 2>&1
 echo "*** kickstart file creating ***"
 
 cat << _EOF_ > ${KSF}
-#-- Install OS instead of upgrade
+#== Install OS instead of upgrade ==
 install
-#-- Use CDROM installation media
+#== Use CDROM installation media ==
 cdrom
-#-- graphical or text install
+#== graphical or text install ==
 text
-#-- shutdown after installation
+#== shutdown after installation ==
 shutdown
 #poweroff
 #halt
 #reboot
 
-#-- System language
+#== System language ==
 lang en_US.UTF-8
 #lang ja_JP.UTF-8
-#-- Keyboard layouts
+#== Keyboard layouts ==
 keyboard --vckeymap=us --xlayouts='us'
 #keyboard --vckeymap=jp --xlayouts='jp'
-#-- System authorization information
+#== System authorization information ==
 auth --enableshadow --passalgo=sha512
-#-- Root password
+#== Root password ==
 rootpw --plaintext ${PASSWORD}
-#-- Run the Setup Agent on first boot
+#== Run the Setup Agent on first boot ==
 firstboot --disable
-#-- SELinux configuration --
+#== SELinux configuration ==
+#-- selinux must be disabled before installation to avoid some error.
 #selinux --enforcing
 #selinux --permissive
 selinux --disabled
-## selinux must be disabled before installation to avoid some error.
-#-- Network information
+#== Network information ==
 network \
 --device=eth0 \
 --bootproto=static \
@@ -134,52 +136,58 @@ network \
 --nameserver=${NAMESERVER} \
 --noipv6 \
 --activate \
---hostname=${HOSTNAME}
-#-- Firewall configuration
+--hostname=${HOSTNAME%%.*}
+#== Firewall configuration ==
 firewall --enabled --ssh
 #firewall --enabled --ssh --http
-#-- System services
+#== System services
 services --enabled="chronyd"
-#-- System timezone
+#== System timezone
 timezone America/New_York --isUtc --ntpservers=${NTPSERVERS}
 #timezone Asia/Tokyo --isUtc --ntpservers=${NTPSERVERS}
 
-#-- System bootloader configuration
+#== System bootloader configuration ==
 bootloader --location=mbr --boot-drive=vda --append=" crashkernel=auto" 
 
-#-- use /dev/vda for install destination
+#== use /dev/vda for install destination ==
 ignoredisk --only-use=vda
-#-- Partition clearing information
+#== Partition clearing information ==
 clearpart --none --initlabel 
-#-- Disk partitioning information
+#== Disk partitioning information ==
 part /boot --fstype="xfs" --ondisk=vda --size=500
 part pv.2 --fstype="lvmpv" --ondisk=vda --size=8192 --grow
 volgroup centos --pesize=4096 pv.2
 logvol / --fstype="xfs" --grow --maxsize=51200 --size=1024 --name=root --vgname=centos
 logvol swap --fstype="swap" --size=1024 --name=swap --vgname=centos
 
-#-- Packages Section --
+#== Packages Section ==
 %packages
 @^minimal
 @core
-yum-utils
 chrony
+
+#-- skip installing Adaptec SAS firmware
+-aic94xx-firmware*
+#-- skip installing firmware fo wi-fi
+-iwl*firmware
+#-- skip installing firmware for WinTV Hauppauge PVR
+-ivtv-firmware
 
 %end
 
-#-- Addon Section --
+#== Addon Section ==
 %addon com_redhat_kdump --enable --reserve-mb='auto'
 
 %end
 
-#-- Anaconda Section --
+#== Anaconda Section ==
 %anaconda
 pwpolicy root --minlen=6 --minquality=50 --notstrict --nochanges --notempty
 pwpolicy user --minlen=6 --minquality=50 --notstrict --nochanges --notempty
 pwpolicy luks --minlen=6 --minquality=50 --notstrict --nochanges --notempty
 %end
 
-#-- Post Section --
+#== Post Section ==
 %post
 
 %end
@@ -211,7 +219,7 @@ virt-install \
 
 if [ $? -ne 0 ]; then
   # something error happened before guest install
-  exit
+  exit 1
 fi
 
 # Display Console
@@ -247,13 +255,33 @@ guestfish -d ${DOM} -i << _EOF_
 _EOF_
 
 # --------------------------------------
+# upload dvd to guest
+# --------------------------------------
+
+echo "*** uploading DVD to guest ***"
+
+echo "*** begin uploading ***"
+guestfish -d ${DOM} -i << _EOF_
+  #== copy ISO in guest
+  copy-in ${DVD1} /media
+_EOF_
+echo "*** end uploading ***"
+
+# --------------------------------------
 # disable all existing repos 
 # --------------------------------------
 
 echo "*** disable all existing repos  ***"
 
 guestfish -d ${DOM} -i << _EOF_
-  # disable all existing repos 
+  #== before package installation, we need to mount iso
+  mkdir-p /media/${DVD1_MNT}
+  mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
+
+  #== install yum-utils by rpm command
+  command "rpm -Uvh /media/${DVD1_MNT}/Packages/yum-utils-1.1.31-40.el7.noarch.rpm /media/${DVD1_MNT}/Packages/python-kitchen-1.1.1-5.el7.noarch.rpm /media/${DVD1_MNT}/Packages/python-chardet-2.2.1-1.el7_1.noarch.rpm /media/${DVD1_MNT}/Packages/libxml2-python-2.9.1-6.el7_2.3.x86_64.rpm"
+
+  #== disable all existing repos
   command "yum-config-manager --disable base"
   command "yum-config-manager --disable updates"
   command "yum-config-manager --disable extras"
@@ -294,37 +322,29 @@ isomount () {
   fi
 }
 
-# -- iso loop mount #1 --
+#== iso loop mount #1 ==
 isomount ${DVD1_ISO}
 
 _EOF_
 
 F3R=/etc/rc.d/rc.local
 guestfish -d ${DOM} -i << _EOF_
-  #-- upload .repo file
+  #== upload .repo file
   upload ${F1L} ${F1R}
 
-  #-- upload /etc/rc.d/isomount
+  #== upload /etc/rc.d/isomount
   upload ${F2L} ${F2R}
 
-  #-- backup original file
+  #== backup original file
   cp-a ${F3R} ${F3R}-ORG
-  #-- update rc.local
+  #== update rc.local
   write-append ${F3R} "\n"
   write-append ${F3R} "# centos73 dvd iso mount\n"
   write-append ${F3R} "source /etc/rc.d/isomount\n"
-  #-- enable rc.local service
+  #== enable rc.local service
   command "chmod 755 ${F3R}"
 
 _EOF_
-
-if [ -f ${DVD1} ]; then
-  echo "*** uploading DVD1 ***"
-  guestfish -d ${DOM} -i << _EOF_
-  #-- copy ISO in guest --
-  copy-in ${DVD1} /media
-_EOF_
-fi
 
 # ----------------------------------------------------------
 # install packages
@@ -333,14 +353,14 @@ fi
 echo "*** install packages: sos, xxxx ***"
 
 guestfish -d ${DOM} -i << _EOF_
-  #-- before package installation, we need to mount iso
+  #== before package installation, we need to mount iso
   mkdir-p /media/${DVD1_MNT}
   mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
 
-  #-- you can install packages here
-  #-- install sos
+  #== you can install packages here
+  #== install sos
   command "yum install sos -y"
-  #-- install xxxx
+  #== install xxxx
   #command "yum install xxxx -y"
 _EOF_
 
@@ -349,22 +369,22 @@ echo "*** install packages: httpd ***"
 F4R=/etc/httpd/conf/httpd.conf
 F4L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  #-- before package installation, we need to mount iso
+  #== before package installation, we need to mount iso
   mkdir-p /media/${DVD1_MNT}
   mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
 
-  #-- install httpd
+  #== install httpd
   command "yum install httpd -y"
-  #-- edit httpd.conf ServerName
-  #-- backup original
+  #== edit httpd.conf ServerName
+  #== backup original
   cp-a ${F4R} ${F4R}-ORG
-  #-- copy from guest to local
+  #== copy from guest to local
   download ${F4R} ${F4L}
-  #-- edit on local
+  #== edit on local
   ! sed -i -e '/^#ServerName www.example.com:80/a ServerName 127.0.0.1:80' ${F4L}
   ! echo ${F4L}
   ! cat ${F4L}
-  #-- copy from local to guest
+  #== copy from local to guest
   upload ${F4L} ${F4R}
 _EOF_
 
@@ -378,11 +398,11 @@ echo "*** grub timeout settings ***"
 F5R=/etc/default/grub
 F5L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  #-- backup original
+  #== backup original
   cp-a ${F5R} ${F5R}-ORG
-  #-- copy from guest to local
+  #== copy from guest to local
   download ${F5R} ${F5L}
-  #-- edit on local
+  #== edit on local
   ! sed -i -e 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' ${F5L}
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ rhgb//g' ${F5L}
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/ quiet//g' ${F5L}
@@ -390,9 +410,9 @@ guestfish -d ${DOM} -i << _EOF_
   ! sed -i -e '/GRUB_CMDLINE_LINUX=/s/\"\$/ console=tty0 console=ttyS0\"/' ${F5L}
   ! echo ${F5L}
   ! cat ${F5L}
-  #-- copy from local to guest
+  #== copy from local to guest
   upload ${F5L} ${F5R}
-  #-- run grub2-mkconfig
+  #== run grub2-mkconfig
   command "grub2-mkconfig -o /boot/grub2/grub.cfg"
 _EOF_
 
@@ -431,13 +451,13 @@ _EOF_
 F8R=/etc/postfix/main.cf
 F8L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  #-- backup original
+  #== backup original
   cp-a ${F8R} ${F8R}-ORG
-  #-- copy from guest to local
+  #== copy from guest to local
   download ${F8R} ${F8L}
-  #-- edit on local
+  #== edit on local
   ! sed -i -e '/^inet_protocols =/s/all/ipv4/g' ${F8L}
-  #-- copy from local to guest
+  #== copy from local to guest
   upload ${F8L} ${F8R}
 _EOF_
 
@@ -453,13 +473,13 @@ F9R=/etc/ssh/sshd_config
 # ssh UseDNS no
 F9L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
-  #-- backup original /etc/ssh/sshd_config
+  #== backup original /etc/ssh/sshd_config
   cp-a ${F9R} ${F9R}-ORG
-  #-- copy from guest to local
+  #== copy from guest to local
   download ${F9R} ${F9L}
-  #-- edit on local
+  #== edit on local
   ! sed -i -e 's%\(^\s*#\s*UseDNS\s\s*yes\)%UseDNS no%g' ${F9L}
-  #-- copy from local to guest
+  #== copy from local to guest
   upload ${F9L} ${F9R}
 _EOF_
 
@@ -489,7 +509,7 @@ guestfish -d ${DOM} -i << _EOF_
 _EOF_
 
 # ----------------------------
-# selinux enabled at next reboot
+# selinux enabled on next reboot
 # ----------------------------
 
 echo "*** selinux enabled ***"
@@ -498,16 +518,32 @@ F10R=/etc/selinux/config
 F10L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
-  #-- backup original file
+  #== backup original file
   cp-a ${F10R} ${F10R}-ORG
-  #-- copy file from guest to local
+  #== copy file from guest to local
   download ${F10R} ${F10L}
-  #-- edit file on local
+  #== edit file on local
   ! sed -i 's/^SELINUX=.*/SELINUX=enforcing/' ${F10L}
   ! echo ${F10L}
   ! cat ${F10L}
-  #-- copy file from local to guest
+  #== copy file from local to guest
   upload ${F10L} ${F10R}
+_EOF_
+
+# ----------------------------
+# /etc/hosts
+# ----------------------------
+
+echo "*** editing /etc/hosts ***"
+
+F11R=/etc/hosts
+guestfish -d ${DOM} -i << _EOF_
+  #== backup original file
+  cp-a ${F11R} ${F11R}-ORG
+  #== update
+  write-append ${F11R} "\n"
+  write-append ${F11R} "${IP} ${HOSTNAME} ${HOSTNAME%%.*}\n"
+
 _EOF_
 
 # ----------------------------------------------------------
