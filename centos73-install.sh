@@ -168,7 +168,7 @@ chrony
 
 #-- skip installing Adaptec SAS firmware
 -aic94xx-firmware*
-#-- skip installing firmware fo wi-fi
+#-- skip installing firmware for wi-fi
 -iwl*firmware
 #-- skip installing firmware for WinTV Hauppauge PVR
 -ivtv-firmware
@@ -388,7 +388,6 @@ guestfish -d ${DOM} -i << _EOF_
   upload ${F4L} ${F4R}
 _EOF_
 
-
 # --------------------------------------
 # grub timeout settings
 # --------------------------------------
@@ -469,8 +468,6 @@ echo "*** ssh UseDNS no ***"
 
 # sshd_config settings file
 F9R=/etc/ssh/sshd_config
-
-# ssh UseDNS no
 F9L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   #== backup original /etc/ssh/sshd_config
@@ -519,7 +516,7 @@ F10L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
   #== backup original file
-  cp-a ${F10R} ${F10R}-ORG
+  #cp-a ${F10R} ${F10R}-ORG
   #== copy file from guest to local
   download ${F10R} ${F10L}
   #== edit file on local

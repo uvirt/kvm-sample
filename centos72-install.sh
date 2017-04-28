@@ -76,15 +76,17 @@ fi
 echo "*** initial check OK ***"
 
 # ----------------------------------------------------------
-# clear old vm if existing
+# erase previous vm & snapshot if existing
 # ----------------------------------------------------------
 
-echo "*** clear old vm ***"
+echo "*** erase previous vm & snapshot ***"
 
 # stop domain forcefully
 virsh destroy ${DOM} >/dev/null 2>&1
+# delete all snapshot of domain
+virsh snapshot-list ${DOM} --name 2>/dev/null | xargs -I% sh -c "virsh snapshot-delete ${DOM} --snapshotname % >/dev/null 2>&1;"
 # undefine domain
-virsh undefine ${DOM} --remove-all-storage >/dev/null 2>&1
+virsh undefine ${DOM} --remove-all-storage --delete-snapshots >/dev/null 2>&1
 # remove domain image file
 rm -f ${IMG} >/dev/null 2>&1
 
@@ -134,7 +136,7 @@ network \
 --nameserver=${NAMESERVER} \
 --noipv6 \
 --activate \
---hostname=${HOSTNAME}
+--hostname=${HOSTNAME%%.*}
 #-- Firewall configuration
 firewall --enabled --ssh
 #firewall --enabled --ssh --http
@@ -160,9 +162,16 @@ logvol swap --fstype="swap" --size=1024 --name=swap --vgname=centos
 
 #-- Packages Section --
 %packages
+@^minimal
 @core
-yum-utils
 chrony
+
+#-- skip installing Adaptec SAS firmware
+-aic94xx-firmware*
+#-- skip installing firmware for wi-fi
+-iwl*firmware
+#-- skip installing firmware for WinTV Hauppauge PVR
+-ivtv-firmware
 
 %end
 
@@ -234,13 +243,33 @@ guestfish -d ${DOM} -i << _EOF_
 _EOF_
 
 # --------------------------------------
+# upload dvd to guest
+# --------------------------------------
+
+echo "*** uploading DVD to guest ***"
+
+echo "*** begin uploading ***"
+guestfish -d ${DOM} -i << _EOF_
+  #== copy ISO in guest
+  copy-in ${DVD1} /media
+_EOF_
+echo "*** end uploading ***"
+
+# --------------------------------------
 # disable all existing repos 
 # --------------------------------------
 
 echo "*** disable all existing repos  ***"
 
 guestfish -d ${DOM} -i << _EOF_
-  # disable all existing repos 
+  #== before package installation, we need to mount iso
+  mkdir-p /media/${DVD1_MNT}
+  mount-loop /media/${DVD1_ISO} /media/${DVD1_MNT}
+
+  #== install yum-utils by rpm command
+  command "rpm -Uvh /media/${DVD1_MNT}/Packages/yum-utils-1.1.31-34.el7.noarch.rpm /media/${DVD1_MNT}/Packages/python-kitchen-1.1.1-5.el7.noarch.rpm /media/${DVD1_MNT}/Packages/python-chardet-2.2.1-1.el7_1.noarch.rpm /media/${DVD1_MNT}/Packages/libxml2-python-2.9.1-5.el7_1.2.x86_64.rpm"
+
+  #== disable all existing repos
   command "yum-config-manager --disable base"
   command "yum-config-manager --disable updates"
   command "yum-config-manager --disable extras"
@@ -304,14 +333,6 @@ guestfish -d ${DOM} -i << _EOF_
   command "chmod 755 ${F3R}"
 
 _EOF_
-
-if [ -f ${DVD1} ]; then
-  echo "*** uploading DVD1 ***"
-  guestfish -d ${DOM} -i << _EOF_
-  #-- copy ISO in guest --
-  copy-in ${DVD1} /media
-_EOF_
-fi
 
 # ----------------------------------------------------------
 # install packages
@@ -439,7 +460,7 @@ F9L=$(mktemp)
 guestfish -d ${DOM} -i << _EOF_
   touch /.autorelabel
   #-- backup original file
-  cp-a ${F9R} ${F9R}-ORG
+  #cp-a ${F9R} ${F9R}-ORG
   #-- copy file from guest to local
   download ${F9R} ${F9L}
   #-- edit file on local
@@ -448,6 +469,22 @@ guestfish -d ${DOM} -i << _EOF_
   ! cat ${F9L}
   #-- copy file from local to guest
   upload ${F9L} ${F9R}
+_EOF_
+
+# ----------------------------
+# /etc/hosts
+# ----------------------------
+
+echo "*** editing /etc/hosts ***"
+
+F11R=/etc/hosts
+guestfish -d ${DOM} -i << _EOF_
+  #-- backup original file
+  cp-a ${F11R} ${F11R}-ORG
+  #-- update
+  write-append ${F11R} "\n"
+  write-append ${F11R} "${IP} ${HOSTNAME} ${HOSTNAME%%.*}\n"
+
 _EOF_
 
 # ----------------------------------------------------------
