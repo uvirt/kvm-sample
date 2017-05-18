@@ -81,10 +81,12 @@ echo "*** initial check OK ***"
 # clear old vm if existing
 # ----------------------------------------------------------
 
-echo "*** clear old vm ***"
+echo "*** erase previous vm & snapshot ***"
 
 # stop domain forcefully
 virsh destroy ${DOM} >/dev/null 2>&1
+# delete all snapshot of domain
+virsh snapshot-list ${DOM} --name 2>/dev/null | xargs -I% sh -c "virsh snapshot-delete ${DOM} --snapshotname % >/dev/null 2>&1;"
 # undefine domain
 virsh undefine ${DOM} --remove-all-storage >/dev/null 2>&1
 # remove domain image file
