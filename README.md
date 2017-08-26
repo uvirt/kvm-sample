@@ -1,8 +1,6 @@
 # kvm-sample
 Unattended install of CentOS 6.8 and CentOS 7.x vm on KVM host
 
-https://www.uvirt.com/wp1/20160307-1601
-
 ## Envinronment
 
 Fedora 25 Workstation 64 bit KVM host.
